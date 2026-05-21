@@ -1,0 +1,30 @@
+name: "dict-cli"
+arch: "${ARCH}"
+platform: "linux"
+version: "${VERSION}"
+section: "utils"
+priority: "optional"
+maintainer: "gink <gink@example.com>"
+description: |
+  English learning CLI tools powered by Ollama LLM.
+  Includes `dict` (dictionary lookup) and `gram` (grammar checker).
+homepage: "https://github.com/gink/dict-cli"
+license: "MIT"
+
+depends:
+  - ca-certificates
+
+contents:
+  - src: "${BINARY_DIR}/dict"
+    dst: /usr/bin/dict
+  - src: "${BINARY_DIR}/gram"
+    dst: /usr/bin/gram
+
+deb:
+  fields:
+    Vcs-Browser: https://github.com/gink/dict-cli
+    Vcs-Git: https://github.com/gink/dict-cli.git
+
+rpm:
+  summary: English learning CLI tools powered by Ollama (dict + gram)
+  group: Applications/Text

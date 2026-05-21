@@ -1,0 +1,258 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            rpm_arch: x86_64
+            deb_arch: amd64
+          - goos: linux
+            goarch: arm64
+            rpm_arch: aarch64
+            deb_arch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.23"
+
+      - name: Set version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          COMMIT="${GITHUB_SHA::7}"
+          DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          LDFLAGS="-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${DATE}"
+          mkdir -p build
+          go build -trimpath -ldflags "${LDFLAGS}" -o build/dict ./cmd/dict
+          go build -trimpath -ldflags "${LDFLAGS}" -o build/gram ./cmd/gram
+
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            build/dict
+            build/gram
+
+  package-linux:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            rpm_arch: x86_64
+            deb_arch: amd64
+          - goos: linux
+            goarch: arm64
+            rpm_arch: aarch64
+            deb_arch: arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: build
+
+      - name: Set version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+
+      - name: Install nfpm
+        run: |
+          echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list
+          sudo apt-get update
+          sudo apt-get install -y nfpm
+
+      - name: Package .deb
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+          ARCH: ${{ matrix.deb_arch }}
+          BINARY_DIR: ${{ github.workspace }}/build
+        run: nfpm package --config nfpm.yaml --packager deb --target "dist/"
+
+      - name: Package .rpm
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+          ARCH: ${{ matrix.rpm_arch }}
+          BINARY_DIR: ${{ github.workspace }}/build
+        run: nfpm package --config nfpm.yaml --packager rpm --target "dist/"
+
+      - name: Package .tar.gz
+        run: |
+          mkdir -p dist/tarball/usr/bin
+          install -m 755 build/dict dist/tarball/usr/bin/dict
+          install -m 755 build/gram dist/tarball/usr/bin/gram
+          tar -czf dist/dict-cli_${{ steps.version.outputs.VERSION }}_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz -C dist/tarball usr
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/*
+
+  package-darwin:
+    needs: build
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: binaries-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: build
+
+      - name: Set version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+
+      - name: Package .tar.gz
+        run: |
+          mkdir -p dist/tarball
+          install -m 755 build/dict dist/tarball/dict
+          install -m 755 build/gram dist/tarball/gram
+          tar -czf dist/dict-cli_${{ steps.version.outputs.VERSION }}_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz -C dist/tarball dict gram
+
+      - name: Create .dmg
+        run: |
+          mkdir -p dist/dmg
+          install -m 755 build/dict dist/dmg/dict
+          install -m 755 build/gram dist/dmg/gram
+          hdiutil create \
+            -volname "dict-cli Installer" \
+            -srcfolder dist/dmg \
+            -ov -format UDZO \
+            dist/dict-cli_${{ steps.version.outputs.VERSION }}_${{ matrix.goos }}_${{ matrix.goarch }}.dmg
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/*
+
+  release:
+    needs: [package-linux, package-darwin]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: packages-*
+          merge-multiple: true
+
+      - name: Generate PKGBUILD
+        run: |
+          cat packaging/arch/PKGBUILD.tmpl > dist/PKGBUILD
+          sed -i "s/{{ .Version }}/${{ steps.version.outputs.VERSION }}/g" dist/PKGBUILD
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "dict-cli v${{ steps.version.outputs.VERSION }}"
+          body: |
+            English learning CLI tools powered by Ollama LLM.
+
+            ## Tools
+
+            - **dict** — English-Vietnamese dictionary (word lookup with meanings, pronunciation, examples)
+            - **gram** — English grammar checker (checks sentences and provides corrections)
+
+            ## Install
+
+            ### Debian / Ubuntu
+            ```
+            curl -sLO https://github.com/gink/dict-cli/releases/download/v${{ steps.version.outputs.VERSION }}/dict-cli_${{ steps.version.outputs.VERSION }}_linux_amd64.deb
+            sudo dpkg -i dict-cli_${{ steps.version.outputs.VERSION }}_linux_amd64.deb
+            ```
+
+            ### RHEL / Fedora
+            ```
+            curl -sLO https://github.com/gink/dict-cli/releases/download/v${{ steps.version.outputs.VERSION }}/dict-cli_${{ steps.version.outputs.VERSION }}_linux_x86_64.rpm
+            sudo rpm -i dict-cli_${{ steps.version.outputs.VERSION }}_linux_x86_64.rpm
+            ```
+
+            ### Arch Linux
+            ```
+            curl -sLO https://github.com/gink/dict-cli/releases/download/v${{ steps.version.outputs.VERSION }}/PKGBUILD
+            makepkg -si
+            ```
+
+            ### macOS
+            ```
+            curl -sLO https://github.com/gink/dict-cli/releases/download/v${{ steps.version.outputs.VERSION }}/dict-cli_${{ steps.version.outputs.VERSION }}_darwin_arm64.dmg
+            open dict-cli_${{ steps.version.outputs.VERSION }}_darwin_arm64.dmg
+            ```
+
+            ### Generic tarball
+            ```
+            curl -sLO https://github.com/gink/dict-cli/releases/download/v${{ steps.version.outputs.VERSION }}/dict-cli_${{ steps.version.outputs.VERSION }}_linux_amd64.tar.gz
+            tar -xzf dict-cli_${{ steps.version.outputs.VERSION }}_linux_amd64.tar.gz
+            sudo install -m 755 usr/bin/dict usr/bin/gram /usr/local/bin/
+            ```
+
+            ---
+
+            Requires [Ollama](https://ollama.com) running with a model (default: `deepseek-v4-pro:cloud`).
+          files: |
+            dist/*.deb
+            dist/*.rpm
+            dist/*.tar.gz
+            dist/*.dmg
+            dist/PKGBUILD
+          draft: false
+          prerelease: false
+          generate_release_notes: true

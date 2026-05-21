@@ -1,0 +1,23 @@
+# Maintainer: gink <gink@example.com>
+
+pkgname=dict-cli
+pkgver={{ .Version }}
+pkgrel=1
+pkgdesc="English learning CLI tools powered by Ollama LLM (dict + gram)"
+arch=('x86_64' 'aarch64')
+url="https://github.com/gink/dict-cli"
+license=('MIT')
+depends=('glibc')
+
+_arch_mapped="amd64"
+if [[ "$CARCH" == "aarch64" ]]; then
+  _arch_mapped="arm64"
+fi
+
+source=("${pkgname}-${pkgver}.tar.gz::https://github.com/gink/dict-cli/releases/download/v${pkgver}/dict-cli_${pkgver}_linux_${_arch_mapped}.tar.gz")
+sha256sums=('SKIP')
+
+package() {
+  install -Dm755 "${srcdir}/usr/bin/dict" "${pkgdir}/usr/bin/dict"
+  install -Dm755 "${srcdir}/usr/bin/gram" "${pkgdir}/usr/bin/gram"
+}
