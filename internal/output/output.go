@@ -15,6 +15,7 @@ const (
 	grammarColWidth = 14
 	defaultMeaningW = 40
 	defaultExamplesW = 70
+	maxTableWidth   = 132
 )
 
 var (
@@ -67,11 +68,9 @@ func termWidth() int {
 }
 
 func computeColumns(termW int) [4]int {
-	fullW := typeColWidth + grammarColWidth + defaultMeaningW + defaultExamplesW + 13
-
 	w := termW
-	if w <= 0 || w > fullW {
-		w = fullW
+	if w <= 0 || w > maxTableWidth {
+		w = maxTableWidth
 	}
 
 	totalFixed := typeColWidth + grammarColWidth + 13
