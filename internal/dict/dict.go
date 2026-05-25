@@ -55,7 +55,7 @@ func Lookup(ctx context.Context, llm llms.Model, word string) Result {
 		llms.TextParts(llms.ChatMessageTypeHuman, word),
 	}
 
-	resp, err := llm.GenerateContent(ctx, messages, llms.WithTemperature(0.5))
+	resp, err := llm.GenerateContent(ctx, messages, llms.WithTemperature(0.3))
 	if err != nil {
 		return Result{Word: word, Err: fmt.Errorf("llm error: %w", err)}
 	}

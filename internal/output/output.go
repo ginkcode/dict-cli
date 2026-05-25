@@ -224,11 +224,18 @@ func wrapText(s string, maxWidth int) string {
 	return strings.Join(lines, "\n")
 }
 
+func colorPad(s, c string, w int) string {
+	colored := color(c, s)
+	// %-*s pads by bytes; ANSI escapes add invisible bytes, so widen the
+	// format width by the number of escape bytes to keep visual width == w.
+	return fmt.Sprintf("%-*s", w+len(colored)-len(s), colored)
+}
+
 func printInvalidTable(invalid []dict.Result) {
 	w := 32
 
 	fmt.Printf("┌%s┐\n", strings.Repeat("─", w+2))
-	fmt.Printf("│ %-*s │\n", w, color(red, "WORD"))
+	fmt.Printf("│ %s │\n", colorPad("WORD", red, w))
 	fmt.Printf("├%s┤\n", strings.Repeat("─", w+2))
 
 	for _, r := range invalid {
@@ -236,7 +243,7 @@ func printInvalidTable(invalid []dict.Result) {
 		if r.Err != nil {
 			word = fmt.Sprintf("%s (%s)", r.Word, r.Err.Error())
 		}
-		fmt.Printf("│ %-*s │\n", w, color(red, word))
+		fmt.Printf("│ %s │\n", colorPad(word, red, w))
 	}
 
 	fmt.Printf("└%s┘\n\n", strings.Repeat("─", w+2))
