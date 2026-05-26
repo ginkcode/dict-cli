@@ -25,20 +25,20 @@ dict-cli/
 
 ## Dependencies
 
-| Package | Purpose |
-|---|---|
-| `github.com/tmc/langchaingo` | LangChain Go — Ollama LLM client |
+| Package                             | Purpose                                                    |
+| ----------------------------------- | ---------------------------------------------------------- |
+| `github.com/tmc/langchaingo`        | LangChain Go — Ollama LLM client                           |
 | `github.com/olekukonko/tablewriter` | Box-drawing tables (pure Go, no shell `column` dependency) |
-| `encoding/json` (stdlib) | Parse LLM JSON response |
-| `text/tabwriter` (stdlib) | Fallback aligned columns |
-| `sync`, `sort` (stdlib) | Concurrent lookups with ordered results |
+| `encoding/json` (stdlib)            | Parse LLM JSON response                                    |
+| `text/tabwriter` (stdlib)           | Fallback aligned columns                                   |
+| `sync`, `sort` (stdlib)             | Concurrent lookups with ordered results                    |
 
 ## Flags / Environment
 
-| Flag | Env | Default | Description |
-|---|---|---|---|
-| `--model` | `DICT_MODEL` | `deepseek-v4-pro:cloud` | Ollama model name |
-| `--host` | `OLLAMA_HOST` | `http://localhost:11434` | Ollama server URL |
+| Flag      | Env           | Default                  | Description       |
+| --------- | ------------- | ------------------------ | ----------------- |
+| `--model` | `DICT_MODEL`  | `glm-5.1:cloud`          | Ollama model name |
+| `--host`  | `OLLAMA_HOST` | `http://localhost:11434` | Ollama server URL |
 
 ## Architecture Flow
 
@@ -159,25 +159,25 @@ Just the word string, e.g. `"serendipity"`.
 
 ## Color Scheme (ANSI)
 
-| Element | Color | Code |
-|---|---|---|
-| Valid words header | Green | `\033[32m` |
-| Invalid words header | Red | `\033[31m` |
-| Word + pronunciation | Bold white | `\033[1m` |
-| Invalid word text | Red | `\033[31m` |
-| Reset | — | `\033[0m` |
+| Element              | Color      | Code       |
+| -------------------- | ---------- | ---------- |
+| Valid words header   | Green      | `\033[32m` |
+| Invalid words header | Red        | `\033[31m` |
+| Word + pronunciation | Bold white | `\033[1m`  |
+| Invalid word text    | Red        | `\033[31m` |
+| Reset                | —          | `\033[0m`  |
 
 ## Edge Cases & Error Handling
 
-| Scenario | Handling |
-|---|---|
-| Ollama unreachable | Fatal: "Cannot connect to Ollama at <url>" |
-| Model not pulled | `WithPullModel()` auto-pulls on first request |
+| Scenario             | Handling                                                |
+| -------------------- | ------------------------------------------------------- |
+| Ollama unreachable   | Fatal: "Cannot connect to Ollama at <url>"              |
+| Model not pulled     | `WithPullModel()` auto-pulls on first request           |
 | LLM returns non-JSON | Parse error → retry once, then show error for that word |
-| LLM timeout | Show "timed out" for that word, continue with others |
-| Single word, invalid | Show only invalid section |
-| All words valid | Show only valid section (skip invalid header) |
-| No args | Print usage: `Usage: dict <word> [word...]` |
+| LLM timeout          | Show "timed out" for that word, continue with others    |
+| Single word, invalid | Show only invalid section                               |
+| All words valid      | Show only valid section (skip invalid header)           |
+| No args              | Print usage: `Usage: dict <word> [word...]`             |
 
 ## Concurrency Strategy
 
