@@ -19,7 +19,7 @@ var (
 
 func main() {
 	showVersion := flag.Bool("version", false, "Print version and exit")
-	model := flag.String("model", envOr("DICT_MODEL", "glm-5.1:cloud"), "Ollama model name")
+	model := flag.String("model", envOr("DICT_MODEL", "deepseek-v4-pro:cloud"), "Ollama model name")
 	host := flag.String("host", envOr("OLLAMA_HOST", "http://localhost:11434"), "Ollama server URL")
 	flag.Parse()
 

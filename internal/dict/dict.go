@@ -41,7 +41,7 @@ Respond ONLY with a single JSON object, no markdown, no explanation:
   "meanings": [
     {
       "type": "noun/verb/adjective/adverb/preposition/phrasal verb/idiom/phrase/etc",
-      "grammar": "for nouns: countable/uncountable/both; for verbs: transitive/intransitive/both; for adjectives: attributive/predicative/both; otherwise leave empty",
+      "grammar": "pick exactly one — nouns: 'countable', 'uncountable', or 'both'; verbs: 'transitive', 'intransitive', or 'both'; adjectives: 'attributive', 'predicative', or 'both'; otherwise leave empty",
       "meaning": "Vietnamese definition here",
       "examples": ["example sentence 1", "example sentence 2", "example sentence 3"]
     }

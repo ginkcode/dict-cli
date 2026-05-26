@@ -12,7 +12,7 @@ import (
 
 const (
 	typeColWidth    = 12
-	grammarColWidth = 14
+	grammarColWidth = 28
 	defaultMeaningW = 40
 	defaultExamplesW = 70
 	maxTableWidth   = 132
@@ -207,8 +207,19 @@ func wrapText(s string, maxWidth int) string {
 
 	var lines []string
 	for utf8.RuneCountInString(s) > maxWidth {
-		cut := maxWidth
-		for i := cut; i > 0; i-- {
+		// Find the byte offset at the maxWidth-th rune boundary.
+		// cut := maxWidth would be wrong for multi-byte chars (e.g. Vietnamese).
+		cutByte := len(s)
+		n := 0
+		for i := range s {
+			if n == maxWidth {
+				cutByte = i
+				break
+			}
+			n++
+		}
+		cut := cutByte
+		for i := cutByte; i > 0; i-- {
 			r, _ := utf8.DecodeLastRuneInString(s[:i])
 			if r == ' ' || r == ',' || r == ';' || r == '/' || r == '-' || r == '(' {
 				cut = i

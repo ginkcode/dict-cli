@@ -37,7 +37,7 @@ dict-cli/
 
 | Flag      | Env           | Default                  | Description       |
 | --------- | ------------- | ------------------------ | ----------------- |
-| `--model` | `DICT_MODEL`  | `glm-5.1:cloud`          | Ollama model name |
+| `--model` | `DICT_MODEL`  | `deepseek-v4-pro:cloud`  | Ollama model name |
 | `--host`  | `OLLAMA_HOST` | `http://localhost:11434` | Ollama server URL |
 
 ## Architecture Flow
