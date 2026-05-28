@@ -11,11 +11,11 @@ import (
 )
 
 const (
-	typeColWidth    = 12
-	grammarColWidth = 28
-	defaultMeaningW = 40
+	typeColWidth     = 12
+	grammarColWidth  = 14
+	defaultMeaningW  = 40
 	defaultExamplesW = 70
-	maxTableWidth   = 132
+	maxTableWidth    = 132
 )
 
 var (
