@@ -255,6 +255,13 @@ func printInvalidTable(invalid []dict.Result) {
 			word = fmt.Sprintf("%s (%s)", r.Word, r.Err.Error())
 		}
 		fmt.Printf("│ %s │\n", colorPad(word, red, w))
+		if len(r.Suggestions) > 0 {
+			label := "did you mean:"
+			fmt.Printf("│ %s │\n", colorPad(label, green, w))
+			for _, s := range r.Suggestions {
+				fmt.Printf("│   - %s │\n", colorPad(s, "", w-4))
+			}
+		}
 	}
 
 	fmt.Printf("└%s┘\n\n", strings.Repeat("─", w+2))

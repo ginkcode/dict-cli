@@ -21,6 +21,7 @@ type LLMResponse struct {
 	Word          string    `json:"word"`
 	Pronunciation string    `json:"pronunciation"`
 	Meanings      []Meaning `json:"meanings"`
+	Suggestions   []string  `json:"suggestions"`
 }
 
 type Result struct {
@@ -29,6 +30,7 @@ type Result struct {
 	IsValid       bool
 	Pronunciation string
 	Meanings      []Meaning
+	Suggestions   []string
 	Err           error
 }
 
@@ -45,9 +47,11 @@ Respond ONLY with a single JSON object, no markdown, no explanation:
       "meaning": "Vietnamese definition here",
       "examples": ["example sentence 1", "example sentence 2", "example sentence 3"]
     }
-  ]
+  ],
+  "suggestions": ["closest valid English words/phrases/idioms that the user most likely meant, e.g. corrections of typos, misspellings, or OCR errors; empty array if the input is valid"]
 }
-For invalid or non-English words, respond: {"is_valid": false, "word": "..."}`
+For valid words, set "is_valid": true, fill in "meanings", and leave "suggestions" as an empty array.
+For invalid or non-English words, respond: {"is_valid": false, "word": "...", "suggestions": ["..."]}. Provide up to 5 closest valid English words sorted by likelihood. Do NOT echo the invalid input as a suggestion.`
 
 func Lookup(ctx context.Context, llm llms.Model, word string) Result {
 	messages := []llms.MessageContent{
@@ -83,6 +87,7 @@ func Lookup(ctx context.Context, llm llms.Model, word string) Result {
 		IsValid:       llmResp.IsValid,
 		Pronunciation: llmResp.Pronunciation,
 		Meanings:      llmResp.Meanings,
+		Suggestions:   llmResp.Suggestions,
 	}
 }
 
