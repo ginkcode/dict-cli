@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/gink/dict-cli/internal/dict"
-	"github.com/gink/dict-cli/internal/output"
+	"github.com/ginkcode/dict-cli/internal/dict"
+	"github.com/ginkcode/dict-cli/internal/output"
 	"github.com/tmc/langchaingo/llms/ollama"
 )
 

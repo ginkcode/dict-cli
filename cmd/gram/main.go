@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/atotto/clipboard"
-	"github.com/gink/dict-cli/internal/gram"
+	"github.com/ginkcode/dict-cli/internal/gram"
 	"github.com/tmc/langchaingo/llms/ollama"
 )
 

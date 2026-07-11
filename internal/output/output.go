@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/gink/dict-cli/internal/dict"
+	"github.com/ginkcode/dict-cli/internal/dict"
 	"golang.org/x/term"
 )
 

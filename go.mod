@@ -1,4 +1,4 @@
-module github.com/gink/dict-cli
+module github.com/ginkcode/dict-cli
 
 go 1.26.2
 
