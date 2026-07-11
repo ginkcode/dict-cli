@@ -246,7 +246,7 @@ jobs:
 
             ---
 
-            Requires [Ollama](https://ollama.com) running with a model (default: `deepseek-v4-pro:cloud`).
+            Requires [Ollama](https://ollama.com) running with a model (default: `deepseek-v4-flash:cloud`).
           files: |
             dist/*.deb
             dist/*.rpm

@@ -35,10 +35,10 @@ dict-cli/
 
 ## Flags / Environment
 
-| Flag      | Env           | Default                  | Description       |
-| --------- | ------------- | ------------------------ | ----------------- |
-| `--model` | `DICT_MODEL`  | `deepseek-v4-pro:cloud`  | Ollama model name |
-| `--host`  | `OLLAMA_HOST` | `http://localhost:11434` | Ollama server URL |
+| Flag      | Env           | Default                   | Description       |
+| --------- | ------------- | ------------------------- | ----------------- |
+| `--model` | `DICT_MODEL`  | `deepseek-v4-flash:cloud` | Ollama model name |
+| `--host`  | `OLLAMA_HOST` | `http://localhost:11434`  | Ollama server URL |
 
 ## Architecture Flow
 
@@ -140,7 +140,7 @@ Just the word string, e.g. `"serendipity"`.
   │ verb │ chạy                 │ 1. She runs every morning.               │
   │      │                      │ 2. He ran to catch the bus.              │
   ├──────┼──────────────────────┼──────────────────────────────────────────┤
-  │ noun │ cuộc đua / cuộc chạy │ 1. He went for a morning run.           │
+  │ noun │ cuộc đua / cuộc chạy │ 1. He went for a morning run.            │
   └──────┴──────────────────────┴──────────────────────────────────────────┘
 ```
 
