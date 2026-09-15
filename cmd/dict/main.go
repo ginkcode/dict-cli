@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ginkcode/dict-cli/internal/config"
 	"github.com/ginkcode/dict-cli/internal/dict"
+	"github.com/ginkcode/dict-cli/internal/llm"
 	"github.com/ginkcode/dict-cli/internal/output"
-	"github.com/tmc/langchaingo/llms/ollama"
 )
 
 var (
@@ -18,9 +19,17 @@ var (
 )
 
 func main() {
+	cfg, cfgErr := config.Load()
+	if cfgErr != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to load config: %v\n", cfgErr)
+	}
+
 	showVersion := flag.Bool("version", false, "Print version and exit")
-	model := flag.String("model", envOr("DICT_MODEL", "deepseek-v4-pro:cloud"), "Ollama model name")
-	host := flag.String("host", envOr("OLLAMA_HOST", "http://localhost:11434"), "Ollama server URL")
+	provider := flag.String("provider", envOr("DICT_PROVIDER", cfg.Provider), "LLM provider: ollama or openai")
+	model := flag.String("model", "", "Model name (defaults to config for the selected provider)")
+	host := flag.String("host", envOr("OLLAMA_HOST", ""), "Ollama server URL")
+	baseURL := flag.String("base-url", envOr("OPENAI_BASE_URL", ""), "OpenAI-compatible API base URL")
+	apiKey := flag.String("api-key", envOr("OPENAI_API_KEY", ""), "OpenAI-compatible API key")
 	flag.Parse()
 
 	if *showVersion {
@@ -34,19 +43,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	llm, err := ollama.New(
-		ollama.WithModel(*model),
-		ollama.WithServerURL(*host),
-		ollama.WithFormat("json"),
-		ollama.WithPullModel(),
-	)
+	opts := llm.Options{Provider: *provider}
+	switch *provider {
+	case config.ProviderOpenAI:
+		opts.Model = firstNonEmpty(*model, envOr("DICT_MODEL", ""), cfg.OpenAI.Model)
+		opts.BaseURL = firstNonEmpty(*baseURL, cfg.OpenAI.BaseURL)
+		opts.APIKey = firstNonEmpty(*apiKey, cfg.OpenAI.APIKey)
+	default:
+		opts.Model = firstNonEmpty(*model, envOr("DICT_MODEL", ""), cfg.Ollama.Model)
+		opts.Host = firstNonEmpty(*host, cfg.Ollama.Host)
+	}
+
+	llmModel, err := llm.New(opts)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to initialize Ollama: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to initialize LLM: %v\n", err)
 		os.Exit(1)
 	}
 
 	ctx := context.Background()
-	results := dict.LookupAll(ctx, llm, words)
+	results := dict.LookupAll(ctx, llmModel, words)
 
 	valid, invalid := dict.Partition(results)
 	output.PrintResults(valid, invalid)
@@ -57,4 +72,13 @@ func envOr(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }

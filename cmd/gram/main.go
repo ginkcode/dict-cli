@@ -8,8 +8,9 @@ import (
 	"strings"
 
 	"github.com/atotto/clipboard"
+	"github.com/ginkcode/dict-cli/internal/config"
 	"github.com/ginkcode/dict-cli/internal/gram"
-	"github.com/tmc/langchaingo/llms/ollama"
+	"github.com/ginkcode/dict-cli/internal/llm"
 )
 
 var (
@@ -19,9 +20,17 @@ var (
 )
 
 func main() {
+	cfg, cfgErr := config.Load()
+	if cfgErr != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to load config: %v\n", cfgErr)
+	}
+
 	showVersion := flag.Bool("version", false, "Print version and exit")
-	model := flag.String("model", envOr("GRAM_MODEL", envOr("DICT_MODEL", "deepseek-v4-pro:cloud")), "Ollama model name")
-	host := flag.String("host", envOr("OLLAMA_HOST", "http://localhost:11434"), "Ollama server URL")
+	provider := flag.String("provider", envOr("GRAM_PROVIDER", envOr("DICT_PROVIDER", cfg.Provider)), "LLM provider: ollama or openai")
+	model := flag.String("model", "", "Model name (defaults to config for the selected provider)")
+	host := flag.String("host", envOr("OLLAMA_HOST", ""), "Ollama server URL")
+	baseURL := flag.String("base-url", envOr("OPENAI_BASE_URL", ""), "OpenAI-compatible API base URL")
+	apiKey := flag.String("api-key", envOr("OPENAI_API_KEY", ""), "OpenAI-compatible API key")
 	flag.Parse()
 
 	if *showVersion {
@@ -41,19 +50,25 @@ Examples:
 
 	sentence := strings.Join(args, " ")
 
-	llm, err := ollama.New(
-		ollama.WithModel(*model),
-		ollama.WithServerURL(*host),
-		ollama.WithFormat("json"),
-		ollama.WithPullModel(),
-	)
+	opts := llm.Options{Provider: *provider}
+	switch *provider {
+	case config.ProviderOpenAI:
+		opts.Model = firstNonEmpty(*model, envOr("GRAM_MODEL", envOr("DICT_MODEL", "")), cfg.OpenAI.Model)
+		opts.BaseURL = firstNonEmpty(*baseURL, cfg.OpenAI.BaseURL)
+		opts.APIKey = firstNonEmpty(*apiKey, cfg.OpenAI.APIKey)
+	default:
+		opts.Model = firstNonEmpty(*model, envOr("GRAM_MODEL", envOr("DICT_MODEL", "")), cfg.Ollama.Model)
+		opts.Host = firstNonEmpty(*host, cfg.Ollama.Host)
+	}
+
+	llmModel, err := llm.New(opts)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: failed to initialize Ollama: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: failed to initialize LLM: %v\n", err)
 		os.Exit(1)
 	}
 
 	ctx := context.Background()
-	result := gram.Check(ctx, llm, sentence)
+	result := gram.Check(ctx, llmModel, sentence)
 
 	if result.Err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", result.Err)
@@ -96,4 +111,13 @@ func envOr(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }
