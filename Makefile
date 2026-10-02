@@ -14,7 +14,7 @@ DIST_DIR  := dist
 GO        := go
 GOFLAGS   := -trimpath -ldflags "$(LDFLAGS)"
 
-.PHONY: all build dict gram clean test vet install dist version help
+.PHONY: all build dict gram clean test vet install release dist version help
 .DEFAULT_GOAL := build
 
 all: build
@@ -40,23 +40,34 @@ install: build ## Install to $GOPATH/bin
 	install -m 755 $(BUILD_DIR)/dict $(shell $(GO) env GOPATH)/bin/dict
 	install -m 755 $(BUILD_DIR)/gram $(shell $(GO) env GOPATH)/bin/gram
 
-dist: build ## Build tarballs for all platforms (local use; CI uses GHA)
-	@mkdir -p $(DIST_DIR)
-	@for bin in dict gram; do \
-		for pair in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do \
-			goos=$${pair%%/*}; goarch=$${pair##*/}; \
-			GOOS=$$goos GOARCH=$$goarch $(GO) build $(GOFLAGS) -o $(BUILD_DIR)/$$bin-$$goos-$$goarch ./cmd/$$bin; \
-			out=$(DIST_DIR)/$${bin}_$(VERSION)_$${goos}_$${goarch}.tar.gz; \
-			if [ "$$goos" = "linux" ]; then \
-				install -D -m 755 $(BUILD_DIR)/$$bin-$$goos-$$goarch $(DIST_DIR)/_tmp/usr/bin/$$bin; \
-				tar -czf $$out -C $(DIST_DIR)/_tmp usr; \
-			else \
-				install -D -m 755 $(BUILD_DIR)/$$bin-$$goos-$$goarch $(DIST_DIR)/_tmp/$$bin; \
-				tar -czf $$out -C $(DIST_DIR)/_tmp $$bin; \
-			fi; \
-			rm -rf $(DIST_DIR)/_tmp; \
-		done; \
+PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64
+
+release: ## Cross-build dict and gram and package local release archives
+	@set -eu; \
+	mkdir -p $(DIST_DIR); \
+	stage=$$(mktemp -d); \
+	trap 'rm -rf "$$stage"' EXIT; \
+	for pair in $(PLATFORMS); do \
+		goos=$${pair%%/*}; goarch=$${pair##*/}; \
+		out=$(BUILD_DIR)/$$goos-$$goarch; \
+		mkdir -p "$$out"; \
+		echo "building $$goos/$$goarch"; \
+		CGO_ENABLED=0 GOOS=$$goos GOARCH=$$goarch $(GO) build $(GOFLAGS) -o "$$out/dict" ./cmd/dict; \
+		CGO_ENABLED=0 GOOS=$$goos GOARCH=$$goarch $(GO) build $(GOFLAGS) -o "$$out/gram" ./cmd/gram; \
+		rm -rf "$$stage"/*; \
+		if [ "$$goos" = "linux" ]; then \
+			mkdir -p "$$stage/usr/bin"; \
+			install -m 755 "$$out/dict" "$$stage/usr/bin/dict"; \
+			install -m 755 "$$out/gram" "$$stage/usr/bin/gram"; \
+			tar -czf $(DIST_DIR)/dict-cli_$(VERSION)_$${goos}_$${goarch}.tar.gz -C "$$stage" usr; \
+		else \
+			install -m 755 "$$out/dict" "$$stage/dict"; \
+			install -m 755 "$$out/gram" "$$stage/gram"; \
+			tar -czf $(DIST_DIR)/dict-cli_$(VERSION)_$${goos}_$${goarch}.tar.gz -C "$$stage" dict gram; \
+		fi; \
 	done
+
+dist: release ## Alias for release
 
 version: ## Print version
 	@echo $(VERSION)
